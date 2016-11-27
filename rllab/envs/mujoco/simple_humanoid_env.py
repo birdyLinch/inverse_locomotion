@@ -38,7 +38,7 @@ class SimpleHumanoidEnv(MujocoEnv, Serializable):
         return np.concatenate([
             data.qpos.flat,
             data.qvel.flat,
-            np.clip(data.cfrc_ext, -1, 1).flat,
+            # np.clip(data.cfrc_ext, -1, 1).flat,
             self.get_body_com("torso").flat,
         ])
 

@@ -4,6 +4,8 @@ from rllab.sampler.base import BaseSampler
 import rllab.misc.logger as logger
 import rllab.plotter as plotter
 from rllab.policies.base import Policy
+import numpy as np
+import pickle
 
 
 class BatchSampler(BaseSampler):
@@ -60,6 +62,9 @@ class BatchPolopt(RLAlgorithm):
             whole_paths=True,
             sampler_cls=None,
             sampler_args=None,
+            discriminator=None,
+            save_policy_every=25,
+            exper_spec="model",
             **kwargs
     ):
         """
@@ -104,6 +109,10 @@ class BatchPolopt(RLAlgorithm):
             sampler_args = dict()
         self.sampler = sampler_cls(self, **sampler_args)
 
+        self.discriminator=discriminator
+        self.save_policy_every = save_policy_every
+        self.exper_spec = exper_spec
+
     def start_worker(self):
         self.sampler.start_worker()
         if self.plot:
@@ -129,6 +138,35 @@ class BatchPolopt(RLAlgorithm):
                     params["paths"] = samples_data["paths"]
                 logger.save_itr_params(itr, params)
                 logger.log("saved")
+
+                # train discreminator
+                if self.discriminator!=None :
+                    observations = []
+                    for path in paths:
+                        observations.append(path['observations'])
+                    self.discriminator.train(observations)
+
+                # Save
+                if self.save_policy_every != None and itr%self.save_policy_every ==0:
+                    # if self.env._normalize_obs:
+                    #     obs_mean=np.zeros(self.env.observation_space.flat_dim)
+                    #     obs_var=np.zeros(self.env.observation_space.flat_dim)
+                    #     path_n = len(paths)
+                    #     try:
+                    #         for idx, path in enumerate(paths):
+                    #             obs_mean += path["env_state"][0]/path_n
+                    #             obs_var += path["env_state"][1]/path_n
+                    #         pickle.dump([obs_mean, obs_var], open("model/"+self.exper_spec+str(itr)+"env.pickle", "wb"))
+                    #     except Exception as e:
+                    #         print("ERROR: can not dump env")
+                    #         print(e)
+
+                    if (self.discriminator!=None):
+                            pickle.dump(self.policy, open("model/"+self.exper_spec+str(itr)+"policy.pickle","wb"))
+                            pickle.dump(self.discriminator, open("model/"+self.exper_spec+str(itr)+"discriminator.pickle","wb"))
+                    else:
+                        pickle.dump(self.policy, open("model/"+self.exper_spec+str(itr)+".pickle","wb"))
+
                 logger.dump_tabular(with_prefix=False)
                 if self.plot:
                     self.update_plot()
