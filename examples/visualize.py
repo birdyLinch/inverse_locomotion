@@ -5,18 +5,28 @@ from rllab.envs.normalized_env import normalize
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import pickle
 
 # auto save config
-debug_env = True
-experiment_spec = "model"
-save_policy_every = 50
+debug_env = False
+experiment_spec = "model4|"
+save_policy_every = 900
 
 # show result config
 iter_each_policy = 1000
 max_path_len = 5000
 
-# test env
-env = normalize(HumanoidEnv())
+# # test env
+# env = normalize(HumanoidEnv(
+#             vel_deviation_cost_coeff=0,
+#             alive_bonus=0,
+#             ctrl_cost_coeff=0,
+#             impact_cost_coeff=0,
+#             disc=pickle.load(open("model/"+experiment_spec+itr_str+"discriminatior.pickle","rb")),
+#             vel_threshold=0.5,
+#             vel_bonus=0.1,
+#         )
+#     )
 
 #temps
 exper_num = 0
@@ -33,6 +43,16 @@ while True:
         #     print(env._obs_mean)
         #     print("var")
         #     print(env._obs_var)
+        env = normalize(HumanoidEnv(
+                vel_deviation_cost_coeff=0,
+                alive_bonus=0,
+                ctrl_cost_coeff=0,
+                impact_cost_coeff=0,
+                disc=pickle.load(open("model/"+experiment_spec+itr_str+"discriminator.pickle","rb")),
+                vel_threshold=0.4,
+                vel_bonus=0.2,
+            )
+        )
         policy = pickle.load(open("model/"+experiment_spec+itr_str+"policy.pickle","rb"))
         exper_num+=1
         tol_reward = 0

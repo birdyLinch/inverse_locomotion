@@ -1,0 +1,59 @@
+11/27/2016
+
+
+    gan_imitation:
+        discriminator:
+            type - mlp
+            layer - (128, 64, 32)
+            lr - 0.005
+        policy:
+            type - gaussian mlp
+            layer - (100, 50, 20)
+            optimize - trpo
+            stepsize - 0.01
+            batchsize 20000
+            maxpathlength - 500
+            discount -0.995
+        baseline:
+            type - gaussian mlp
+            layer - (100, 50, 20)
+            optimize - conjugate optimizer
+            stepsize -0.01
+        reward:
+            allive bounus - 0.2
+            discriminator_a - 1
+
+        2016-11-27 14:21:20.563652 PST | ------------------------  -------------
+        2016-11-27 14:21:20.563787 PST | vf_LossBefore               0.410545
+        2016-11-27 14:21:20.563861 PST | vf_LossAfter                0.292179
+        2016-11-27 14:21:20.563920 PST | vf_dLoss                    0.118366
+        2016-11-27 14:21:20.563983 PST | vf_MeanKL                   0.00915732
+        2016-11-27 14:21:20.564027 PST | Iteration                 850
+        2016-11-27 14:21:20.564071 PST | AverageDiscountedReturn   132.678
+        2016-11-27 14:21:20.564133 PST | AverageReturn             234.569
+        2016-11-27 14:21:20.564213 PST | ExplainedVariance           0.93343
+        2016-11-27 14:21:20.564288 PST | NumTrajs                   87
+        2016-11-27 14:21:20.564333 PST | Entropy                    27.0869
+        2016-11-27 14:21:20.564394 PST | Perplexity                  5.80328e+11
+        2016-11-27 14:21:20.564469 PST | StdReturn                  69.4347
+        2016-11-27 14:21:20.564547 PST | MaxReturn                 423.003
+        2016-11-27 14:21:20.564598 PST | MinReturn                 123.142
+        2016-11-27 14:21:20.564642 PST | AverageForwardProgress     -0.0365419
+        2016-11-27 14:21:20.564716 PST | MaxForwardProgress          0.652986
+        2016-11-27 14:21:20.564796 PST | MinForwardProgress         -0.840047
+        2016-11-27 14:21:20.564847 PST | StdForwardProgress          0.367065
+        2016-11-27 14:21:20.564904 PST | AveragePolicyStd            0.882404
+        2016-11-27 14:21:20.564996 PST | LossBefore                  1.36304e-16
+        2016-11-27 14:21:20.565079 PST | LossAfter                  -0.0407731
+        2016-11-27 14:21:20.565173 PST | MeanKLBefore                0
+        2016-11-27 14:21:20.565257 PST | MeanKL                      0.00642118
+        2016-11-27 14:21:20.565352 PST | dLoss                       0.0407731
+        2016-11-27 14:21:20.565423 PST | averageDiscriminatorLoss    8.11714e-08
+        2016-11-27 14:21:20.565499 PST | ------------------------  -------------
+
+        1. too small max path length,
+        2. too big learning rate for discriminator, do not get reward from discriminator
+        3. have to find a way to get rid of the alive bounus,
+
+
+
