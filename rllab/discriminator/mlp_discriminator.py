@@ -18,8 +18,8 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
     def __init__(
             self,
             iteration,
-            disc_window=2,
-            disc_joints_dim=10,
+            disc_window=16,
+            disc_joints_dim=20,
             learning_rate=0.005,
             train_threshold=0.25, # train when average_disc_loss > train_threshold
             a_max=1.0,
@@ -30,14 +30,17 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
             hidden_sizes=(32, 32),
             hidden_nonlinearity=NL.tanh,
             output_nonlinearity=NL.sigmoid,
+            downsample_factor=1,
             disc_network=None,
     ):
         Serializable.quick_init(self, locals())
         self.batch_size=64
         self.iter_per_train=iter_per_train
         self.disc_window = disc_window
+        self.downsample_factor = downsample_factor 
         self.disc_joints_dim = disc_joints_dim
-        self.disc_dim = self.disc_window*self.disc_joints_dim
+        self.disc_window_downsampled = (self.disc_window-1)//self.downsample_factor + 1
+        self.disc_dim = self.disc_window_downsampled*self.disc_joints_dim
         self.end_iter = int(iteration*decent_portion)
         self.iter_count = 0
         self.learning_rate = learning_rate
@@ -58,6 +61,7 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
         self._disc_network = disc_network
 
         disc_reward = disc_network.output_layer
+        self.disc_reward = disc_network.output_layer
         obs_var = disc_network.input_layer.input_var
 
         disc_var, = L.get_output([disc_reward])
@@ -91,9 +95,12 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
         self.a = np.linspace(a_min, a_max, self.end_iter)
 
     def get_reward(self, observation):
-        if(len(observation.shape)==1):
+        if len(observation.shape)==1:
             observation = observation.reshape((1, observation.shape[0]))
+
         disc_ob = self.get_disc_obs(observation)
+        # print(self.disc_dim)
+        # print(disc_ob.shape)
         assert(disc_ob.shape[1] == self.disc_dim)
         reward = self._f_disc(disc_ob)[0]
         return reward[0][0]
@@ -133,18 +140,14 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
         # usedDim = np.ones(X.shape[1]).astype('bool')
         # usedDim[39:45] = False
         # usedDim = sio.loadmat('limbMask.mat')['mask'][0].astype(bool)
-        self.usedDim = [5, 14, 16, 17, 19, 26, 28, 33, 38, 52]
+        self.usedDim = [4,5,6,51,52,53,27,28,29,18,19,20,17,14,38,26,15,16,32,33]
         #only knee
         #self.usedDim = [26,38]
         usedDim = self.usedDim
         X = X[:,usedDim]
         if (X.shape[1] != self.disc_joints_dim):
             print("\n", X.shape[1], self.disc_joints_dim)
-        
-        c=180.0/np.pi
-        print("mocap_disc")
-        print(np.max(X, axis=0)/c)
-        print(np.min(X, axis=0)/c)
+
         return X
 
     def get_batch_mocap(self, batch_size):
@@ -153,8 +156,8 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
         '''
         mask = np.random.randint(0, self.data.shape[0]-self.disc_window, size=batch_size)
         temp =[]
-        for i in range(self.disc_window):
-            temp.append(self.data[mask+i])
+        for i in range(self.disc_window_downsampled):
+            temp.append(self.data[mask+i*self.downsample_factor])
         batch_mocap = np.hstack(temp)
         assert(batch_mocap.shape[0]==batch_size)
         assert(batch_mocap.shape[1]==self.disc_dim)
@@ -217,70 +220,58 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
 
         for state,frame in zip(states,range(len(states))):
 
-            # Fill in the data that we have
-            s = list(state)
-            f = np.zeros(62)
-            # #data['lhumerus'] = [c*s[19],c*s[18],c*s[17]]
-            # #leftshoulder
-            # f[51:54] = [c*s[15],c*s[16], 0]
-            # #data['lradius'] = [-c*s[20]]
-            # #leftelbow angle
-            # f[17] = 0
-            # #data['rhumerus'] = [c*s[23],c*s[22],c*s[21]]
-            # #rightsholder
-            # f[4:7] = [c*s[13],c*s[14],0]
-            # #data['rradius'] = [-c*s[24]]
-            # #rightelbow angle
-            # f[14] = 0
-            # #data['rfemur'] = [c*s[13],c*s[14],c*s[15]]
-            # #right hip x,y,x rotation
-            # f[18:21] = [0, c*s[8], c*s[7]]
-            # #data['rtibia'] = [c*s[16]]
-            # #right knee angle
-            # f[26] = c*s[9]
-            # #data['lfemur'] = [c*s[9],c*s[10],c*s[11]]
-            # #left hip x,y,z rotation
-            # f[27:30] = [0, c*s[11], c*s[10]]
-            # #data['ltibia'] = [c*s[12]]
-            # #left knee angle
-            # f[38] = c*s[12]
+            if frame % self.downsample_factor ==0:
 
-            # # ankle mujoco ＋蹬 －收 （－50，50）
-            # s[14] #right
-            # s[20] #left
+                # Fill in the data that we have
+                s = list(state)
+                f = np.zeros(62)
+                
+                # left humerus
+                f[4] = s[28]
+                f[5] = s[27]
+                f[6] = s[26]
 
-            # foot 选了第一个维度
-            f[33] = s[14]
-            f[16] = s[20]
+                # right humerus
+                f[51] = s[24]
+                f[52] = s[23]
+                f[53] = s[22]
 
-            # # elbow mujoco -蹬 ＋收 （－90，50）
-            # s[24] #right
-            # s[27] #left
-            f[14]= 90+s[24]
-            f[17]= 90+s[27]
+                # left femur
+                f[27] = s[18]
+                f[28] = s[17]
+                f[29] = s[16]
 
-            # # knee mujoco ＋蹬 －收 （－2，－160）
-            # s[13] #right
-            # s[19] #left
+                # right femur
+                f[18] = s[12]
+                f[19] = s[11]
+                f[20] = s[10]
 
-            f[26] = -s[13]
-            f[38] = -s[19]
+                # radius
+                f[17] = s[29]
+                f[14] = s[25]
 
-            # # hip_y        -蹬 ＋收 （－120， 20）
-            # s[12] #right
-            # s[18] #left
-            
-            # femur 选了第二个维度
-            f[19]=s[12]+90
-            f[28] = s[18]+90
+                # tibia
+                f[38] = s[19]
+                f[26] = s[13]
 
-            # # shoulder 2    
-            # s[23] #right   -收 ＋伸 （－85，60）
-            # s[26] #left    －伸 ＋收 （－60， 85）
-            f[5] =s[23]
-            f[52] = -s[26]
+                # left foot
+                f[15] = s[21]
+                f[16] = s[20]
+
+                # right foot 
+                f[32] = s[15] 
+                f[33] = s[14]
+
+                
+                # print(f)
 
 
-            frames.append(f)
+                frames.append(f)
         
         return np.asarray(frames)[:,self.usedDim]
+
+    def set_all_params(self, params):
+        L.set_all_param_values(L.get_all_layers(self.disc_reward), params)
+
+    def get_all_params(self):
+        return L.get_all_param_values(self.disc_reward)

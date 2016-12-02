@@ -17,6 +17,7 @@ class NormalizedEnv(ProxyEnv, Serializable):
             normalize_reward=False,
             obs_alpha=0.001,
             reward_alpha=0.001,
+            disc=False,
     ):
         ProxyEnv.__init__(self, env)
         Serializable.quick_init(self, locals())
@@ -48,8 +49,11 @@ class NormalizedEnv(ProxyEnv, Serializable):
         self._update_reward_estimate(reward)
         return reward / (np.sqrt(self._reward_var) + 1e-8)
 
-    def reset(self):
-        ret = self._wrapped_env.reset()
+    def reset(self, value=None):
+        if value==None:
+            ret = self._wrapped_env.reset()
+        else:
+            ret = self._wrapped_env.reset(value)
         if self._normalize_obs:
             return self._apply_normalize_obs(ret)
         else:
@@ -90,6 +94,9 @@ class NormalizedEnv(ProxyEnv, Serializable):
         if self._normalize_reward:
             reward = self._apply_normalize_reward(reward)
         return Step(next_obs, reward * self._scale_reward, done, **info)
+
+    def set_discriminator_params(self, params):
+        self._wrapped_env.set_discriminator_params(params)
 
     def __str__(self):
         return "Normalized: %s" % self._wrapped_env

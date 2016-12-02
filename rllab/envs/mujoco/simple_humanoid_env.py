@@ -42,6 +42,7 @@ class SimpleHumanoidEnv(MujocoEnv, Serializable):
 
     def get_current_obs(self):
         data = self.model.data
+        # print(np.asarray(data.qpos.flat))
         return np.concatenate([
             data.qpos.flat,
             data.qvel.flat,
@@ -82,7 +83,10 @@ class SimpleHumanoidEnv(MujocoEnv, Serializable):
         disc_reward=0.0
         if self.disc!=None:
             disc_states=np.hstack(self.states[-self.disc.disc_window:])
-            disc_reward = self.disc.get_a() * self.disc.get_reward(disc_states)
+            disc_score = self.disc.get_reward(disc_states)
+            # if np.random.randint(0, 1000) == 500:
+            
+            disc_reward = self.disc.get_a() * np.log(disc_score)             
             self.disc.inc_iter()
 
             # clip the line_vel_reward
@@ -97,7 +101,7 @@ class SimpleHumanoidEnv(MujocoEnv, Serializable):
 
 
 
-        done = data.qpos[2] < 0.8 or data.qpos[2] > 2.0
+        done =False #data.qpos[2] < 0.8 #or data.qpos[2] > 2.0
 
         return Step(next_obs, reward, done)
 
@@ -128,3 +132,9 @@ class SimpleHumanoidEnv(MujocoEnv, Serializable):
             self.states.append(curr_obs)
 
         return curr_obs
+
+    def set_discriminator_params(self, params):
+        self.disc.set_all_params(params)
+
+    def get_discriminator_params(self, params):
+        return self.disc.get_all_params()

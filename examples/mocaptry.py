@@ -34,7 +34,7 @@ a = data[5][342]
 print(a)
 
 for i in range(len(a)):
-    if a[i]==-15.1615:
+    if a[i]==-51.9812  :
         print(i)
 
 b = data[5]
@@ -44,3 +44,6 @@ min_b = np.min(b, axis=0)
 print(max_b[16], min_b[16])
 
 X = np.concatenate([np.asarray(frame) for frame in data],0)
+
+
+print(np.log(0.1))

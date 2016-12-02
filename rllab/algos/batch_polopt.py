@@ -6,7 +6,8 @@ import rllab.plotter as plotter
 from rllab.policies.base import Policy
 import numpy as np
 import pickle
-
+from rllab.sampler.stateful_pool import singleton_pool
+from rllab.sampler.parallel_sampler import _worker_set_disc_params
 
 class BatchSampler(BaseSampler):
     def __init__(self, algo):
@@ -145,6 +146,14 @@ class BatchPolopt(RLAlgorithm):
                     for path in paths:
                         observations.append(path['observations'])
                     self.discriminator.train(observations)
+
+                    # distribute discriminator to each worker
+                    params = self.discriminator.get_all_params()
+                    if singleton_pool.n_parallel > 1:
+                        singleton_pool.run_each(
+                            _worker_set_disc_params,
+                            [(params,)] * singleton_pool.n_parallel
+                        )
 
                 # Save
                 if self.save_policy_every != None and itr%self.save_policy_every ==0:

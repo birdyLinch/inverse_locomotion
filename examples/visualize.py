@@ -8,10 +8,9 @@ import sys
 import pickle
 
 # auto save config
-debug_env = False
-experiment_spec = "model4|"
-save_policy_every = 900
-
+debug_env =False
+experiment_spec = "model_only_disc|"
+save_policy_every = 725
 # show result config
 iter_each_policy = 1000
 max_path_len = 5000
@@ -48,7 +47,7 @@ while True:
                 alive_bonus=0,
                 ctrl_cost_coeff=0,
                 impact_cost_coeff=0,
-                disc=pickle.load(open("model/"+experiment_spec+itr_str+"discriminator.pickle","rb")),
+                #disc=pickle.load(open("model/"+experiment_spec+itr_str+"discriminator.pickle","rb")),
                 vel_threshold=0.4,
                 vel_bonus=0.2,
             )
@@ -80,6 +79,12 @@ while True:
         sys.exit(0)
 
 all_rewards = np.array(all_rewards)
+
+# np.array([0.09625816, -0.78859199 , 1.01126844 , 0.84804082 , 0.51415685, -0.05513301,
+#   0.11588723 , 0.22389235 , 0.31955742 ,-0.59864492 , 0.54277726  ,0.06720192,
+#   0.29375958 , 0.20688923  ,0.03635865, -0.27951822,  0.14636601 ,-0.06866802,
+#  -0.49370297  ,0.41969977,  0.27991385, -0.22006313, -1.40829135 , 0.24104596,
+#  -0.1661085,   0.8193666 ,  1.11275057,  0.55966961, -0.87384416,  0.32109327])
 
 # # plot
 # x = np.arange(0, exper_num*save_policy_every, save_policy_every)
