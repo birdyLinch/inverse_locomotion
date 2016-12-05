@@ -47,3 +47,7 @@ X = np.concatenate([np.asarray(frame) for frame in data],0)
 
 
 print(np.log(0.1))
+
+
+
+

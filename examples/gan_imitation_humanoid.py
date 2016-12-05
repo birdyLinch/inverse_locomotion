@@ -9,20 +9,21 @@ from rllab.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptim
 from rllab.discriminator.mlp_discriminator import Mlp_Discriminator
 
 from rllab.sampler import parallel_sampler
-parallel_sampler.initialize(n_parallel=3)
+parallel_sampler.initialize(n_parallel=2)
 
 disc = Mlp_Discriminator( 
         a_max=1, 
         a_min=1, 
-        disc_window=25, 
-        iteration=10000, 
+        disc_window=2, 
+        iteration=1000, 
         disc_joints_dim=20, 
-        hidden_sizes=(128, 64, 32), 
-        learning_rate=1e-4,
+        hidden_sizes=(64, 32), 
+        learning_rate=3e-6,
         train_threshold=0.04,
-        iter_per_train=5,
-        batch_size=256,
-        downsample_factor=4,
+        iter_per_train=3,
+        batch_size=128,
+        downsample_factor=1,
+        reg=0.15
     )
 
 env = normalize(
@@ -67,14 +68,14 @@ algo = TRPO(
     env=env,
     policy=policy,
     baseline=baseline,
-    batch_size=10000,
-    max_path_length=200,
-    n_itr=10000,
+    batch_size=3000,
+    max_path_length=5000,
+    n_itr=3001,
     discount=0.995,
     step_size=0.01,
     discriminator=disc,
     save_policy_every=25,
-    exper_spec="model_only_disc|"
+    exper_spec="test3|"
 )
 
 algo.train()

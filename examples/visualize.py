@@ -8,12 +8,13 @@ import sys
 import pickle
 
 # auto save config
-debug_env =False
-experiment_spec = "model_only_disc|"
-save_policy_every = 725
+debug_env=  False
+experiment_spec = "test|"
+save_policy_every = 1200
+
 # show result config
-iter_each_policy = 1000
-max_path_len = 5000
+iter_each_policy = 600
+max_path_len = 500
 
 # # test env
 # env = normalize(HumanoidEnv(
@@ -57,6 +58,7 @@ while True:
         tol_reward = 0
         for i in range(iter_each_policy):
             observation = env.reset()
+
             env.render()
             sum_reward = 0
             for t in range(max_path_len): 
@@ -66,7 +68,7 @@ while True:
                     action, _ = policy.get_action(observation)
 
                 observation, reward, done, _ = env.step(action)
-                
+                print(observation*180/3.14)
                 if done:
                     break
                 env.render()

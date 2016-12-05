@@ -29,9 +29,12 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
             decent_portion=0.8,
             hidden_sizes=(32, 32),
             hidden_nonlinearity=NL.tanh,
-            output_nonlinearity=NL.sigmoid,
+            output_nonlinearity=None,
             downsample_factor=1,
             disc_network=None,
+            reg=0.08,
+            mocap_framerate=120,
+            mujoco_apirate=20,
     ):
         Serializable.quick_init(self, locals())
         self.batch_size=64
@@ -45,6 +48,8 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
         self.iter_count = 0
         self.learning_rate = learning_rate
         self.train_threshold=train_threshold
+        self.reg =reg
+        self.rate_factor=mocap_framerate//mujoco_apirate
         out_dim = 1
         target_var = TT.imatrix('targets')
 
@@ -60,24 +65,28 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
 
         self._disc_network = disc_network
 
-        disc_reward = disc_network.output_layer
-        self.disc_reward = disc_network.output_layer
+        disc_score = disc_network.output_layer
+        self.disc_score = disc_network.output_layer
         obs_var = disc_network.input_layer.input_var
 
-        disc_var, = L.get_output([disc_reward])
+        disc_var, = L.get_output([disc_score])
 
         self._disc_var = disc_var
 
-        LasagnePowered.__init__(self, [disc_reward])
+        exp_reward = TT.nnet.sigmoid(disc_var)
+        LasagnePowered.__init__(self, [disc_score])
         self._f_disc = ext.compile_function(
             inputs=[obs_var],
-            outputs=[disc_var],
+            outputs=[exp_reward],
             log_name="f_discriminate_forward",
         )
         
         params = L.get_all_params(disc_network, trainable=True)
-        loss = lasagne.objectives.squared_error(disc_var, target_var).mean()
+        batch_loss = TT.nnet.binary_crossentropy(TT.nnet.sigmoid(disc_var), target_var)
+        batch_entropy = self.logit_bernoulli_entropy(disc_var)
+        loss = (batch_loss-self.reg * batch_entropy).mean()
         updates = lasagne.updates.adam(loss, params, learning_rate=self.learning_rate)
+        
         self._f_disc_train = ext.compile_function(
             inputs=[obs_var, target_var],
             outputs=[loss],
@@ -111,53 +120,61 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
         '''
         #print("state len: ", len(observations))
         logger.log("fitting discriminator...")
-        loss=[]
+        loss={"obs":[], "mocap":[]}
 
         for i in range(self.iter_per_train):
             batch_obs = self.get_batch_obs(observations, self.batch_size)
+            print(batch_obs[10]/3.14*180)
             batch_mocap = self.get_batch_mocap(self.batch_size)
             disc_obs = self.get_disc_obs(batch_obs)
             disc_mocap = batch_mocap
+            print("\n\n\n")
+            print(disc_obs[10])
+            print("\n\n")
+            print(disc_mocap[10])
+            print("\n\n\n")
             X = np.vstack((disc_obs, disc_mocap))
             targets = np.zeros([2*self.batch_size, 1])
             targets[self.batch_size :]=1
-            curr_loss = self._f_disc_loss(disc_obs, np.zeros([self.batch_size, 1]))
-            print(curr_loss)
-            if np.mean(curr_loss) > self.train_threshold:
+            obs_loss = self._f_disc_loss(disc_obs, np.zeros([self.batch_size, 1]))
+            mocap_loss = self._f_disc_loss(disc_mocap, np.ones([self.batch_size, 1]))
+            if np.mean(obs_loss) > self.train_threshold:
                 self._f_disc_train(X, targets)
                 logger.log("fitted!")
             else:
                 logger.log("yield training: avg_loss under threshold")
-            loss.append(curr_loss)
-
-        avg_disc_loss = np.mean(loss)
-        logger.record_tabular("averageDiscriminatorLoss", avg_disc_loss)
+            loss["obs"].append(obs_loss)
+            loss["mocap"].append(mocap_loss)
+        avg_disc_loss_obs = np.mean(loss["obs"])
+        avg_disc_loss_mocap = np.mean(loss["mocap"])
+        logger.record_tabular("averageDiscriminatorLoss_mocap", avg_disc_loss_mocap)
+        logger.record_tabular("averageDiscriminatorLoss_obs", avg_disc_loss_obs)
 
     def load_data(self, fileName='MocapData.mat'):
-        # TODO: X (n, dim) dim must equals to the disc_obs
+        # X (n, dim) dim must equals to the disc_obs
         data=sio.loadmat(fileName)['data'][0]
+        
         X = np.concatenate([np.asarray(frame) for frame in data],0)
-        # usedDim = np.ones(X.shape[1]).astype('bool')
-        # usedDim[39:45] = False
-        # usedDim = sio.loadmat('limbMask.mat')['mask'][0].astype(bool)
+        # onepose = data[5][342]
+        # X = np.vstack([onepose,]*1000)
+
         self.usedDim = [4,5,6,51,52,53,27,28,29,18,19,20,17,14,38,26,15,16,32,33]
-        #only knee
-        #self.usedDim = [26,38]
+
         usedDim = self.usedDim
         X = X[:,usedDim]
         if (X.shape[1] != self.disc_joints_dim):
             print("\n", X.shape[1], self.disc_joints_dim)
-
+        #print(X)
         return X
 
     def get_batch_mocap(self, batch_size):
         '''
         return np.array of shape (batch_size, mocap_dim*window)
         '''
-        mask = np.random.randint(0, self.data.shape[0]-self.disc_window, size=batch_size)
+        mask = np.random.randint(0, self.data.shape[0]-self.disc_window*self.rate_factor, size=batch_size)
         temp =[]
         for i in range(self.disc_window_downsampled):
-            temp.append(self.data[mask+i*self.downsample_factor])
+            temp.append(self.data[mask+i*self.downsample_factor*self.rate_factor])
         batch_mocap = np.hstack(temp)
         assert(batch_mocap.shape[0]==batch_size)
         assert(batch_mocap.shape[1]==self.disc_dim)
@@ -225,53 +242,53 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
                 # Fill in the data that we have
                 s = list(state)
                 f = np.zeros(62)
-                
-                # left humerus
-                f[4] = s[28]
-                f[5] = s[27]
-                f[6] = s[26]
 
                 # right humerus
-                f[51] = s[24]
-                f[52] = s[23]
-                f[53] = s[22]
+                f[4] = s[17+7]
+                f[5] = s[16+7]
+                f[6] = s[15+7]
+
+                # left humerus
+                f[51] = s[21+7]
+                f[52] = s[20+7]
+                f[53] = s[19+7]
 
                 # left femur
-                f[27] = s[18]
-                f[28] = s[17]
-                f[29] = s[16]
+                f[27] = s[11+7]
+                f[28] = s[10+7]
+                f[29] = s[9+7]
 
                 # right femur
-                f[18] = s[12]
-                f[19] = s[11]
-                f[20] = s[10]
+                f[18] = s[5+7]
+                f[19] = s[4+7]
+                f[20] = s[3+7]
 
                 # radius
-                f[17] = s[29]
-                f[14] = s[25]
+                f[17] = s[22+7]
+                f[14] = s[18+7]
 
                 # tibia
-                f[38] = s[19]
-                f[26] = s[13]
+                f[38] = s[12+7]
+                f[26] = s[6+7]
 
                 # left foot
-                f[15] = s[21]
-                f[16] = s[20]
+                f[15] = s[14+7]
+                f[16] = s[13+7]
 
                 # right foot 
-                f[32] = s[15] 
-                f[33] = s[14]
-
-                
-                # print(f)
-
+                f[32] = s[8+7] 
+                f[33] = s[7+7]
 
                 frames.append(f)
         
         return np.asarray(frames)[:,self.usedDim]
 
     def set_all_params(self, params):
-        L.set_all_param_values(L.get_all_layers(self.disc_reward), params)
+        L.set_all_param_values(L.get_all_layers(self.disc_score), params)
 
     def get_all_params(self):
-        return L.get_all_param_values(self.disc_reward)
+        return L.get_all_param_values(self.disc_score)
+
+    def logit_bernoulli_entropy(self, disc_var):
+        ent = (1.-TT.nnet.sigmoid(disc_var))*disc_var + TT.nnet.softplus(-disc_var)
+        return ent
