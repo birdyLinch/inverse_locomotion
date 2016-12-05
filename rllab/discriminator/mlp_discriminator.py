@@ -124,15 +124,15 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
 
         for i in range(self.iter_per_train):
             batch_obs = self.get_batch_obs(observations, self.batch_size)
-            print(batch_obs[10]/3.14*180)
+            # print(batch_obs[10]/3.14*180)
             batch_mocap = self.get_batch_mocap(self.batch_size)
             disc_obs = self.get_disc_obs(batch_obs)
             disc_mocap = batch_mocap
-            print("\n\n\n")
-            print(disc_obs[10])
-            print("\n\n")
-            print(disc_mocap[10])
-            print("\n\n\n")
+            # print("\n\n\n")
+            # print(disc_obs[10])
+            # print("\n\n")
+            # print(disc_mocap[10])
+            # print("\n\n\n")
             X = np.vstack((disc_obs, disc_mocap))
             targets = np.zeros([2*self.batch_size, 1])
             targets[self.batch_size :]=1
