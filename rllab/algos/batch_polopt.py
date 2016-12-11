@@ -171,10 +171,10 @@ class BatchPolopt(RLAlgorithm):
                     #         print(e)
 
                     if (self.discriminator!=None):
-                            pickle.dump(self.policy, open("model/"+self.exper_spec+str(itr)+"policy.pickle","wb"))
-                            pickle.dump(self.discriminator, open("model/"+self.exper_spec+str(itr)+"discriminator.pickle","wb"))
+                            pickle.dump(self.policy, open("model/"+self.exper_spec+'/'+str(itr)+"policy.pickle","wb"))
+                            pickle.dump(self.discriminator, open("model/"+self.exper_spec+'/'+str(itr)+"discriminator.pickle","wb"))
                     else:
-                        pickle.dump(self.policy, open("model/"+self.exper_spec+str(itr)+".pickle","wb"))
+                        pickle.dump(self.policy, open("model/"+self.exper_spec+'/'+str(itr)+".pickle","wb"))
 
                 logger.dump_tabular(with_prefix=False)
                 if self.plot:

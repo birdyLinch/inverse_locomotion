@@ -84,9 +84,8 @@ class SimpleHumanoidEnv(MujocoEnv, Serializable):
         if self.disc!=None:
             disc_states=np.hstack(self.states[-self.disc.disc_window:])
             disc_score = self.disc.get_reward(disc_states)
-            # if np.random.randint(0, 1000) == 500:
             
-            disc_reward = self.disc.get_a() * np.log(disc_score)             
+            disc_reward = self.disc.get_a() * - np.log(1 - disc_score)             
             self.disc.inc_iter()
 
             # clip the line_vel_reward
@@ -101,7 +100,7 @@ class SimpleHumanoidEnv(MujocoEnv, Serializable):
 
 
 
-        done =False #data.qpos[2] < 0.8 #or data.qpos[2] > 2.0
+        done =data.qpos[2] < 0.8 or data.qpos[2] > 2.0
 
         return Step(next_obs, reward, done)
 

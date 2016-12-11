@@ -15,6 +15,9 @@ import scipy.io as sio
 import numpy as np
 
 class mlp_dynamic():
-    def __init__():
+    def __init__(self, ):
+        pass
+    def train_self(self, obs, action, res):
+        pass
         
-
+    def forward(self, obs, action):

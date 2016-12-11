@@ -10,39 +10,18 @@ from rllab.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptim
 from rllab.discriminator.mlp_discriminator import Mlp_Discriminator
 from rllab.misc.instrument import stub, run_experiment_lite
 import os
-
 from rllab.sampler import parallel_sampler
 parallel_sampler.initialize(n_parallel=8)
 
-exper_spec="gae_gan_imitation_0"
+exper_spec='gae_trpo_0'
 directory='model/'+exper_spec
 if not os.path.exists(directory):
     os.makedirs(directory)
 
-disc = Mlp_Discriminator( 
-        a_max=1, 
-        a_min=1, 
-        disc_window=2, 
-        iteration=10000, 
-        disc_joints_dim=20, 
-        hidden_sizes=(64, 32), 
-        learning_rate=3e-6,
-        train_threshold=0.04,
-        iter_per_train=3,
-        batch_size=128,
-        downsample_factor=1,
-        reg=0.15,
-        exper_spec=exper_spec
-    )
-
 env = normalize(
         HumanoidEnv(
-            vel_deviation_cost_coeff=0,
-            alive_bonus=0,
-            impact_cost_coeff=0,
-            disc=disc,
-            vel_threshold=0.4,
-            vel_bonus=0.4,
+            vel_threshold=1,
+            vel_bonus=1,
         )
     )
 
@@ -52,25 +31,7 @@ policy = GaussianMLPPolicy(
     hidden_sizes=(128, 64, 32)
 )
 
-base_line_optimizer = ConjugateGradientOptimizer()
-baseline = GaussianMLPBaseline(env.spec,
-    regressor_args={
-        "mean_network": None,
-        "hidden_sizes": (128, 64, 32),
-        "hidden_nonlinearity": NL.tanh,
-        "optimizer": base_line_optimizer,
-        "use_trust_region": True,
-        "step_size": 0.01,
-        "learn_std": True,
-        "init_std": 1.0,
-        "adaptive_std": False,
-        "std_share_network": False,
-        "std_hidden_sizes": (32, 32),
-        "std_nonlinearity": None,
-        "normalize_inputs": True,
-        "normalize_outputs": True,
-    })
-
+baseline=LinearFeatureBaseline(env.spec)
 
 algo = TRPO(
     env=env,
@@ -81,11 +42,9 @@ algo = TRPO(
     n_itr=10001,
     discount=0.995,
     step_size=0.01,
-    discriminator=disc,
     save_policy_every=25,
     exper_spec=exper_spec
 )
-
 
 run_experiment_lite(
     algo.train(),

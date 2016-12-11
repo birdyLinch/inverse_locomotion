@@ -13,6 +13,7 @@ from rllab.misc import logger
 
 import scipy.io as sio
 import numpy as np
+import pickle
 
 class Mlp_Discriminator(LasagnePowered, Serializable):
     def __init__(
@@ -35,6 +36,7 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
             reg=0.08,
             mocap_framerate=120,
             mujoco_apirate=20,
+            exper_spec='none'
     ):
         Serializable.quick_init(self, locals())
         self.batch_size=64
@@ -50,6 +52,9 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
         self.train_threshold=train_threshold
         self.reg =reg
         self.rate_factor=mocap_framerate//mujoco_apirate
+        self.disc_data = {'avg_loss_data':[],
+                    'avg_loss_gen':[]}
+        self.exper_spec=exper_spec
         out_dim = 1
         target_var = TT.imatrix('targets')
 
@@ -124,15 +129,15 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
 
         for i in range(self.iter_per_train):
             batch_obs = self.get_batch_obs(observations, self.batch_size)
-            # print(batch_obs[10]/3.14*180)
+            print(batch_obs[10]/3.14*180)
             batch_mocap = self.get_batch_mocap(self.batch_size)
             disc_obs = self.get_disc_obs(batch_obs)
             disc_mocap = batch_mocap
-            # print("\n\n\n")
-            # print(disc_obs[10])
-            # print("\n\n")
-            # print(disc_mocap[10])
-            # print("\n\n\n")
+            print("\n\n\n")
+            print(disc_obs[10])
+            print("\n\n")
+            print(disc_mocap[10])
+            print("\n\n\n")
             X = np.vstack((disc_obs, disc_mocap))
             targets = np.zeros([2*self.batch_size, 1])
             targets[self.batch_size :]=1
@@ -149,14 +154,17 @@ class Mlp_Discriminator(LasagnePowered, Serializable):
         avg_disc_loss_mocap = np.mean(loss["mocap"])
         logger.record_tabular("averageDiscriminatorLoss_mocap", avg_disc_loss_mocap)
         logger.record_tabular("averageDiscriminatorLoss_obs", avg_disc_loss_obs)
+        self.disc_data['avg_loss_data'].append(avg_disc_loss_mocap)
+        self.disc_data['avg_loss_gen'].append(avg_disc_loss_obs)
+        pickle.dump(self.disc_data, open("model/"+self.exper_spec+"/disc_data.pickle","wb"))
 
     def load_data(self, fileName='MocapData.mat'):
         # X (n, dim) dim must equals to the disc_obs
         data=sio.loadmat(fileName)['data'][0]
         
-        X = np.concatenate([np.asarray(frame) for frame in data],0)
-        # onepose = data[5][342]
-        # X = np.vstack([onepose,]*1000)
+        #X = np.concatenate([np.asarray(frame) for frame in data],0)
+        onepose = data[5][342]
+        X = np.vstack([onepose,]*1000)
 
         self.usedDim = [4,5,6,51,52,53,27,28,29,18,19,20,17,14,38,26,15,16,32,33]
 

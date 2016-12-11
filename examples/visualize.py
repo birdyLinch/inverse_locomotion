@@ -9,8 +9,8 @@ import pickle
 
 # auto save config
 debug_env=  False
-experiment_spec = "test|"
-save_policy_every = 1200
+experiment_spec = "imitation_walking_ankle_z-|"
+save_policy_every = 1775
 
 # show result config
 iter_each_policy = 600
