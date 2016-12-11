@@ -11,7 +11,7 @@ from rllab.discriminator.mlp_discriminator import Mlp_Discriminator
 from rllab.misc.instrument import stub, run_experiment_lite
 import os
 from rllab.sampler import parallel_sampler
-parallel_sampler.initialize(n_parallel=8)
+parallel_sampler.initialize(n_parallel=6)
 
 exper_spec="linearbase_trpo_0"
 directory='model/'+exper_spec
@@ -67,7 +67,7 @@ algo = TRPO(
 run_experiment_lite(
     algo.train(),
     # Number of parallel workers for sampling
-    n_parallel=8,
+    n_parallel=6,
     # Only keep the snapshot parameters for the last iteration
     snapshot_mode="last",
     # Specifies the seed for the experiment. If this is not provided, a random seed

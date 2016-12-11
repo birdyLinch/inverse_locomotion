@@ -3,7 +3,8 @@ from rllab.algos.trpo import TRPO
 from rllab.baselines.gaussian_mlp_baseline import GaussianMLPBaseline
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
 from rllab.envs.mujoco.simple_humanoid_env import SimpleHumanoidEnv
-from rllab.envs.mujoco.humanoid_env import HumanoidEnv
+#from rllab.envs.mujoco.humanoid_env import HumanoidEnv
+#from rllab.envs.mujoco.humanoid_env_origin import HumanoidEnv
 from rllab.envs.normalized_env import normalize
 from rllab.policies.gaussian_mlp_policy import GaussianMLPPolicy
 from rllab.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptimizer
@@ -12,7 +13,7 @@ from rllab.misc.instrument import stub, run_experiment_lite
 import os
 
 from rllab.sampler import parallel_sampler
-parallel_sampler.initialize(n_parallel=8)
+parallel_sampler.initialize(n_parallel=6)
 
 exper_spec="linearbase_gan_imitation_0"
 directory='model/'+exper_spec
@@ -71,7 +72,7 @@ algo = TRPO(
 run_experiment_lite(
     algo.train(),
     # Number of parallel workers for sampling
-    n_parallel=8,
+    n_parallel=6,
     # Only keep the snapshot parameters for the last iteration
     snapshot_mode="last",
     # Specifies the seed for the experiment. If this is not provided, a random seed
